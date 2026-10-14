@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import Toolbar from "./components/Toolbar";
 import StatusBar from "./components/StatusBar";
 import CodeEditor from "./components/CodeEditor";
@@ -25,6 +26,7 @@ export default function App() {
   const [fileName, setFileName] = useState("main.js");
   const [resetKey, setResetKey] = useState(0);
   const [showOutput, setShowOutput] = useState(false);
+  const [outputPct, setOutputPct] = useState(38);
   const [copied, setCopied] = useState(false);
   const [cursor, setCursor] = useState({ line: 1, col: 1 });
   const [aiState, setAiState] = useState<InlineState>({
@@ -32,12 +34,14 @@ export default function App() {
     message: "Ready",
   });
   const copyTimer = useRef<number | null>(null);
+  const shellRef = useRef<HTMLDivElement>(null);
+  const dark = theme === "vs-dark";
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "vs-dark");
-    document.body.style.background = theme === "vs-dark" ? "#1e1e1e" : "#ffffff";
+    document.body.style.background = dark ? "#1e1e1e" : "#ffffff";
     localStorage.setItem("ai-editor-theme", theme);
-  }, [theme]);
+  }, [theme, dark]);
 
   const extFor: Record<SupportedLanguage, string> = useMemo(
     () => ({
@@ -58,13 +62,15 @@ export default function App() {
     [],
   );
 
-  const handleLanguageChange = useCallback((next: SupportedLanguage) => {
-    setLanguage(next);
-    setCode(starterCode(next));
-    setFileName(`main.${extFor[next]}`);
-    setResetKey((k) => k + 1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [extFor]);
+  const handleLanguageChange = useCallback(
+    (next: SupportedLanguage) => {
+      setLanguage(next);
+      setCode(starterCode(next));
+      setFileName(`main.${extFor[next]}`);
+      setResetKey((k) => k + 1);
+    },
+    [extFor],
+  );
 
   const handleCopy = useCallback(() => {
     navigator.clipboard?.writeText(code).then(
@@ -85,10 +91,7 @@ export default function App() {
   }, [language]);
 
   const handleState = useCallback((next: InlineState) => setAiState(next), []);
-
-  const handleRun = useCallback(() => {
-    setShowOutput(true);
-  }, []);
+  const handleRun = useCallback(() => setShowOutput(true), []);
 
   // Ctrl/Cmd + Enter runs the code from anywhere in the app.
   useEffect(() => {
@@ -102,8 +105,40 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // Drag the divider between editor and output panel.
+  const startResize = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      const shell = shellRef.current;
+      if (!shell) return;
+      const rect = shell.getBoundingClientRect();
+
+      const onMove = (ev: PointerEvent) => {
+        const pct = ((rect.bottom - ev.clientY) / rect.height) * 100;
+        setOutputPct(Math.min(75, Math.max(18, pct)));
+      };
+      const onUp = () => {
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      };
+
+      document.body.style.cursor = "row-resize";
+      document.body.style.userSelect = "none";
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+    },
+    [],
+  );
+
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-white text-slate-900 dark:bg-[#1e1e1e] dark:text-slate-100">
+    <div
+      ref={shellRef}
+      className={`flex h-screen flex-col overflow-hidden ${
+        dark ? "bg-[#1e1e1e] text-slate-100" : "bg-white text-slate-900"
+      }`}
+    >
       <Toolbar
         fileName={fileName}
         onFileNameChange={setFileName}
@@ -125,7 +160,10 @@ export default function App() {
       />
 
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className={showOutput ? "min-h-0 flex-[3]" : "min-h-0 flex-1"}>
+        <div
+          className="min-h-0 flex-1"
+          style={showOutput ? { flex: `0 0 ${100 - outputPct}%` } : undefined}
+        >
           <CodeEditor
             language={language}
             value={code}
@@ -141,14 +179,29 @@ export default function App() {
         </div>
 
         {showOutput && (
-          <div className="min-h-0 h-[38%]">
-            <OutputPanel
-              language={language}
-              source={code}
-              theme={theme}
-              onClose={() => setShowOutput(false)}
+          <>
+            <div
+              role="separator"
+              aria-orientation="horizontal"
+              aria-label="Resize output panel"
+              onPointerDown={startResize}
+              onDoubleClick={() => setShowOutput(false)}
+              className={`h-1 shrink-0 cursor-row-resize transition-colors ${
+                dark
+                  ? "bg-white/[0.07] hover:bg-indigo-500/70"
+                  : "bg-slate-200 hover:bg-indigo-500/70"
+              }`}
+              title="Drag to resize · double-click to close"
             />
-          </div>
+            <div className="min-h-0" style={{ flex: `0 0 ${outputPct}%` }}>
+              <OutputPanel
+                language={language}
+                source={code}
+                theme={theme}
+                onClose={() => setShowOutput(false)}
+              />
+            </div>
+          </>
         )}
       </div>
 

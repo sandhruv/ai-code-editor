@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  color-scheme: dark light;
+}
+
 html,
 body,
 #root {
@@ -10,8 +14,16 @@ body,
 }
 
 body {
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none;
+}
+
+::selection {
+  background: rgba(99, 102, 241, 0.35);
 }
 
 .sr-only {
@@ -31,9 +43,46 @@ body {
   outline-offset: 1px;
 }
 
-/* Monaco's ghost text is slightly too bright by default in some themes. */
+/* Ghost text from AI inline completions */
 .monaco-editor .inline-completions {
-  opacity: 0.65;
+  opacity: 0.6;
+}
+
+/* Slim, consistent scrollbars in the panels around the editor */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border: 2px solid transparent;
+  background-clip: content-box;
+  border-radius: 8px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+select {
+  background-image: none;
+}
+
+input,
+textarea,
+select,
+button {
+  font: inherit;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -41,6 +90,7 @@ body {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }
