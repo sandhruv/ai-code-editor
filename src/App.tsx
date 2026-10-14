@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Toolbar from "./components/Toolbar";
 import StatusBar from "./components/StatusBar";
 import CodeEditor from "./components/CodeEditor";
+import OutputPanel from "./components/OutputPanel";
 import { starterCode } from "./constants/starterCode";
 import type { InlineState } from "./hooks/useInlineCompletions";
 import { LANGUAGE_LABELS, type SupportedLanguage } from "./constants/languages";
@@ -23,6 +24,7 @@ export default function App() {
   const [aiEnabled, setAiEnabled] = useState(true);
   const [fileName, setFileName] = useState("main.js");
   const [resetKey, setResetKey] = useState(0);
+  const [showOutput, setShowOutput] = useState(false);
   const [copied, setCopied] = useState(false);
   const [cursor, setCursor] = useState({ line: 1, col: 1 });
   const [aiState, setAiState] = useState<InlineState>({
@@ -84,6 +86,22 @@ export default function App() {
 
   const handleState = useCallback((next: InlineState) => setAiState(next), []);
 
+  const handleRun = useCallback(() => {
+    setShowOutput(true);
+  }, []);
+
+  // Ctrl/Cmd + Enter runs the code from anywhere in the app.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        e.preventDefault();
+        setShowOutput(true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-white text-slate-900 dark:bg-[#1e1e1e] dark:text-slate-100">
       <Toolbar
@@ -101,22 +119,37 @@ export default function App() {
         onAiToggle={() => setAiEnabled((v) => !v)}
         onCopy={handleCopy}
         onReset={handleReset}
+        onRun={handleRun}
+        showOutput={showOutput}
         copied={copied}
       />
 
-      <div className="min-h-0 flex-1">
-        <CodeEditor
-          language={language}
-          value={code}
-          resetKey={resetKey}
-          onChange={setCode}
-          theme={theme}
-          fontSize={fontSize}
-          minimap={minimap}
-          aiEnabled={aiEnabled}
-          onState={handleState}
-          onCursorChange={setCursor}
-        />
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className={showOutput ? "min-h-0 flex-[3]" : "min-h-0 flex-1"}>
+          <CodeEditor
+            language={language}
+            value={code}
+            resetKey={resetKey}
+            onChange={setCode}
+            theme={theme}
+            fontSize={fontSize}
+            minimap={minimap}
+            aiEnabled={aiEnabled}
+            onState={handleState}
+            onCursorChange={setCursor}
+          />
+        </div>
+
+        {showOutput && (
+          <div className="min-h-0 h-[38%]">
+            <OutputPanel
+              language={language}
+              source={code}
+              theme={theme}
+              onClose={() => setShowOutput(false)}
+            />
+          </div>
+        )}
       </div>
 
       <StatusBar language={language} state={aiState} theme={theme} cursor={cursor} />

@@ -19,6 +19,8 @@ export interface ToolbarProps {
   onAiToggle: () => void;
   onCopy: () => void;
   onReset: () => void;
+  onRun: () => void;
+  showOutput: boolean;
   copied: boolean;
 }
 
@@ -41,6 +43,8 @@ export default function Toolbar(props: ToolbarProps) {
     onAiToggle,
     onCopy,
     onReset,
+    onRun,
+    showOutput,
     copied,
   } = props;
 
@@ -130,6 +134,14 @@ export default function Toolbar(props: ToolbarProps) {
       </div>
 
       <div className="ml-auto flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onRun}
+          className={`${btn} border-emerald-500/60 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400`}
+          aria-pressed={showOutput}
+        >
+          ▶ Run
+        </button>
         <button type="button" onClick={onCopy} className={`${btn} ${cls}`}>
           {copied ? "Copied!" : "Copy code"}
         </button>

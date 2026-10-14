@@ -6,6 +6,7 @@ import compression from "compression";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { completionsRouter } from "./routes/completions.js";
+import { runRouter } from "./routes/run.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -27,6 +28,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/completions", completionsRouter);
+app.use("/api/run", runRouter);
 
 if (isProd) {
   const dist = path.resolve(__dirname, "../dist");
